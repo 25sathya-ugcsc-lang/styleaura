@@ -18,8 +18,8 @@ import Settings from './pages/Settings';
 
 // Route protector
 function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated || user?.role !== 'Admin') {
     return <Navigate to="/login" replace />;
   }
   return children;

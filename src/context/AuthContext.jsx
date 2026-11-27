@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi, setAuthToken, getAuthToken } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -10,17 +11,21 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.error(e);
     }
-    // Default logged in demo admin so user immediately sees the beautiful dashboard
-    return {
-      name: 'Admin',
-      email: 'admin@styleaura.com',
-      role: 'Head Store Manager',
-      avatar: '/assets/logo/styleaura-logo.png'
-    };
+    return null;
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('styleaura_auth_token') !== 'false';
+    const token = getAuthToken();
+    const savedUser = localStorage.getItem('styleaura_auth_user');
+    if (!token || token === 'false' || token === 'true' || !savedUser) {
+      return false;
+    }
+    try {
+      const parsed = JSON.parse(savedUser);
+      return parsed?.role === 'Admin';
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
@@ -31,27 +36,50 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  const login = (email, password) => {
-    // Frontend demo validation
+  const login = async (email, password) => {
     if (!email || !password) {
       return { success: false, message: 'Please enter both email and password.' };
     }
-    const loggedInUser = {
-      name: 'Admin',
-      email: email,
-      role: 'Head Store Manager',
-      avatar: '/assets/logo/styleaura-logo.png'
-    };
-    setUser(loggedInUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('styleaura_auth_token', 'true');
-    return { success: true };
+
+    try {
+      const data = await authApi.login(email, password);
+
+      if (!data.token || !data.user) {
+        return {
+          success: false,
+          message: 'Invalid response from server.',
+        };
+      }
+
+      // Normalize role check: backend may return 'admin' or 'Admin'
+      const userRole = (data.user.role || '').toLowerCase();
+      if (userRole !== 'admin') {
+        return {
+          success: false,
+          message: 'Access denied. Admin privileges required.',
+        };
+      }
+
+      // Store with consistent 'Admin' role for the ProtectedRoute check
+      const normalizedUser = { ...data.user, role: 'Admin' };
+
+      setAuthToken(data.token);
+      setUser(normalizedUser);
+      setIsAuthenticated(true);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Unable to connect to authentication server. Please try again.',
+      };
+    }
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.setItem('styleaura_auth_token', 'false');
+    setAuthToken(null);
+    localStorage.removeItem('styleaura_auth_user');
   };
 
   const updateProfile = (updatedData) => {

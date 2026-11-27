@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@styleaura.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -13,7 +13,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -23,22 +23,14 @@ export default function Login() {
     }
 
     setIsLoading(true);
+    const res = await login(email, password);
+    setIsLoading(false);
 
-    setTimeout(() => {
-      const res = login(email, password);
-      setIsLoading(false);
-      if (res.success) {
-        navigate('/dashboard');
-      } else {
-        setError(res.message);
-      }
-    }, 400);
-  };
-
-  const fillDemo = () => {
-    setEmail('admin@styleaura.com');
-    setPassword('admin123');
-    setError('');
+    if (res.success) {
+      navigate('/dashboard');
+    } else {
+      setError(res.message);
+    }
   };
 
   return (
@@ -123,7 +115,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-purple-700/80 pt-1">
+          <div className="flex items-center text-xs text-purple-700/80 pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -132,13 +124,6 @@ export default function Login() {
               />
               <span>Remember me</span>
             </label>
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="text-purple-700 hover:text-purple-900 font-semibold underline decoration-dotted"
-            >
-              Fill Demo Credentials
-            </button>
           </div>
 
           {/* Login Submit Button */}
@@ -158,10 +143,10 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Demo Security Notice */}
+        {/* Security Notice */}
         <div className="mt-6 pt-4 border-t border-purple-100 flex items-center justify-center gap-2 text-center text-[11px] text-purple-900/60 font-medium">
           <ShieldCheck className="w-4 h-4 text-purple-500 flex-shrink-0" />
-          <span>StyleAura LocalStorage Frontend Demo Mode</span>
+          <span>Secure Admin Authentication</span>
         </div>
 
       </div>
